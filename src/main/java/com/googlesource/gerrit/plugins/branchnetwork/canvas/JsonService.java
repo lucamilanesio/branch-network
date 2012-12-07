@@ -58,9 +58,19 @@ public class JsonService extends HttpServlet {
   }
 
   protected String getProjectName(HttpServletRequest req) {
+    String servletPath = req.getServletPath();
     String reqURI = req.getRequestURI();
-    String[] reqParts = reqURI.split("/");
-    return reqParts[reqParts.length-1];
-  }
+    int servletPathPos = reqURI.indexOf(servletPath);
 
+    String projectName =
+        reqURI.substring(servletPathPos + servletPath.length());
+    if (projectName.startsWith("/")) {
+      projectName = projectName.substring(1);
+    }
+    if (projectName.endsWith("/")) {
+      projectName = projectName.substring(0, projectName.length() - 1);
+    }
+
+    return projectName;
+  }
 }
