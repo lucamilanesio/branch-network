@@ -27,6 +27,7 @@ import org.eclipse.jgit.errors.RepositoryNotFoundException;
 import org.eclipse.jgit.lib.Config;
 import org.eclipse.jgit.lib.Repository;
 
+import com.google.common.base.Objects;
 import com.google.gerrit.extensions.annotations.PluginName;
 import com.google.gerrit.httpd.GitWebConfig;
 import com.google.gerrit.reviewdb.client.Project;
@@ -48,6 +49,7 @@ public class GitGraphServlet extends HttpServlet {
   private Factory projectControl;
   private GitRepositoryManager repoManager;
   private GitWebConfig gitWebConfig;
+  private String canonicalWebUrl;
 
   @Inject
   public GitGraphServlet(@PluginName String pluginName,
@@ -55,17 +57,13 @@ public class GitGraphServlet extends HttpServlet {
       final ProjectControl.Factory projectControl,
       final GitRepositoryManager repoManager)
       throws MalformedURLException {
-    URL url =
-        new URL(gerritConfig.getString("gerrit", null, "canonicalWebUrl"));
-    String pathPrefix = "/";
-    if(url != null && url.getPath() != null) {
-      pathPrefix = url.getPath();
-      if(!pathPrefix.endsWith("/")) {
-        pathPrefix += "/";
-      }
+    this.canonicalWebUrl =
+        Objects.firstNonNull(gerritConfig.getString("gerrit", null, "canonicalWebUrl"), "/");
+    if(!canonicalWebUrl.endsWith("/")) {
+      canonicalWebUrl += "/";
     }
     this.canonicalPath =
-        String.format("%splugins/%s/", pathPrefix, pluginName);
+        String.format("%splugins/%s/", canonicalWebUrl, pluginName);
     this.projectControl = projectControl;
     this.repoManager = repoManager;
     this.gitWebConfig = gitWebConfig;
@@ -118,7 +116,6 @@ public class GitGraphServlet extends HttpServlet {
       String networkDataChunkUrl =
           String.format("%1$snetwork_data_chunk/%2$s/?nethash=", canonicalPath,
               repoName);
-
       String commitUrlPattern =
           gitWebConfig.getUrl()
               + gitWebConfig.getGitWebType().getRevision()
@@ -130,10 +127,10 @@ public class GitGraphServlet extends HttpServlet {
                   .replaceAll("\\$\\{project\\}", repoName);
 
       commitUrlPattern =
-          (commitUrlPattern.startsWith("/") ? commitUrlPattern : "/"
+          (commitUrlPattern.startsWith("/") ? commitUrlPattern : canonicalWebUrl
               + commitUrlPattern);
       projectPattern =
-          (projectPattern.startsWith("/") ? projectPattern : "/"
+          (projectPattern.startsWith("/") ? projectPattern : canonicalWebUrl
               + projectPattern);
 
       String header =
